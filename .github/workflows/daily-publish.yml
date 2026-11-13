@@ -1,0 +1,50 @@
+name: Daily Programmatic SEO Build & Deploy
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run self-check & build static site
+        env:
+          AFFILIATE_TAG: ${{ secrets.AFFILIATE_TAG || 'devspec-20' }}
+          AMAZON_DOMAIN: ${{ vars.AMAZON_DOMAIN || 'www.amazon.com.br' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://example.github.io/auto-affiliate-seo' }}
+        run: |
+          python build.py --test
+          python build.py
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
