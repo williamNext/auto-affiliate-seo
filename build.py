@@ -187,7 +187,7 @@ def render_layout(title: str, body_html: str, site_url: str, tag: str, domain: s
 <body>
   <header>
     <strong><a href="{html.escape(site_url.rstrip('/') + '/')}">DevSpec Brasil — Comparativos Técnicos</a></strong>
-    <span style="float:right;color:var(--muted);font-size:0.85rem;">Atualizado: {today}</span>
+    <span style="float:right;color:var(--muted);font-size:0.85rem;"><a href="https://x.com/promoachadosdia" target="_blank" rel="noopener">Siga no X (@promoachadosdia)</a> &bull; Atualizado: {today}</span>
   </header>
   <main>
     <aside class="disclosure" role="note">
