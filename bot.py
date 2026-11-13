@@ -13,6 +13,7 @@ import re
 import secrets
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -127,17 +128,61 @@ def _oauth1_header(method: str, url: str, ck: str, cs: str, at: str, ats: str, n
     return f"OAuth {header_parts}"
 
 
+def _refresh_x_oauth2_token() -> str:
+    client_id = os.getenv("X_CLIENT_ID", "")
+    client_secret = os.getenv("X_CLIENT_SECRET", "")
+    refresh_token = os.getenv("X_OAUTH2_REFRESH_TOKEN", "")
+    if not (client_id and client_secret and refresh_token):
+        return ""
+    basic = base64.b64encode(f"{client_id}:{client_secret}".encode("utf-8")).decode("utf-8")
+    res = _http_json(
+        "https://api.x.com/2/oauth2/token",
+        method="POST",
+        form={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": client_id},
+        headers={"Authorization": f"Basic {basic}"},
+    )
+    new_access = res.get("access_token", "")
+    new_refresh = res.get("refresh_token", "")
+    if new_access:
+        os.environ["X_OAUTH2_ACCESS_TOKEN"] = new_access
+        if new_refresh:
+            os.environ["X_OAUTH2_REFRESH_TOKEN"] = new_refresh
+        env_path = ROOT / ".env"
+        if env_path.exists():
+            txt = env_path.read_text(encoding="utf-8")
+            txt = re.sub(r"^X_OAUTH2_ACCESS_TOKEN=.*$", f"X_OAUTH2_ACCESS_TOKEN={new_access}", txt, flags=re.M)
+            if new_refresh:
+                txt = re.sub(r"^X_OAUTH2_REFRESH_TOKEN=.*$", f"X_OAUTH2_REFRESH_TOKEN={new_refresh}", txt, flags=re.M)
+            env_path.write_text(txt, encoding="utf-8")
+    return new_access
+
+
 def post_x_tweet(text: str, reply_to_id: str = "") -> dict | None:
+    url = "https://api.x.com/2/tweets"
+    payload: dict = {"text": text[:280]}
+    if reply_to_id:
+        payload["reply"] = {"in_reply_to_tweet_id": reply_to_id}
+
+    # 1. Try OAuth 2.0 User Context (auto-refreshes when expired)
+    oauth2_token = os.getenv("X_OAUTH2_ACCESS_TOKEN", "")
+    if oauth2_token or os.getenv("X_OAUTH2_REFRESH_TOKEN", ""):
+        token_to_use = oauth2_token or _refresh_x_oauth2_token()
+        try:
+            return _http_json(url, method="POST", data=payload, headers={"Authorization": f"Bearer {token_to_use}"})
+        except urllib.error.HTTPError as e:
+            if e.code == 401 and os.getenv("X_OAUTH2_REFRESH_TOKEN", ""):
+                refreshed = _refresh_x_oauth2_token()
+                if refreshed:
+                    return _http_json(url, method="POST", data=payload, headers={"Authorization": f"Bearer {refreshed}"})
+            raise
+
+    # 2. Fallback to OAuth 1.0a
     ck = os.getenv("X_API_KEY", "")
     cs = os.getenv("X_API_SECRET", "")
     at = os.getenv("X_ACCESS_TOKEN", "")
     ats = os.getenv("X_ACCESS_SECRET", "")
     if not (ck and cs and at and ats):
         return None
-    url = "https://api.twitter.com/2/tweets"
-    payload: dict = {"text": text[:280]}
-    if reply_to_id:
-        payload["reply"] = {"in_reply_to_tweet_id": reply_to_id}
     auth = _oauth1_header("POST", url, ck, cs, at, ats)
     return _http_json(url, method="POST", data=payload, headers={"Authorization": auth})
 
@@ -243,6 +288,8 @@ def run_bot(publish_deal: bool = True, check_comments: bool = True) -> dict[str,
         try:
             if post_x_tweet(deal["text"]):
                 summary["x_posted"] = 1
+        except urllib.error.HTTPError as e:
+            summary["x_error"] = f"HTTP {e.code}: {e.read().decode('utf-8', errors='replace')[:200]}"
         except Exception as e:
             summary["x_error"] = str(e)[:120]
         try:
