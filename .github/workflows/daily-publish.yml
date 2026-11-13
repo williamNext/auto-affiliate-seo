@@ -36,7 +36,7 @@ jobs:
 
       - name: Run self-check & build static site
         env:
-          AFFILIATE_TAG: ${{ secrets.AFFILIATE_TAG || 'devspec-20' }}
+          AFFILIATE_TAG: ${{ secrets.AFFILIATE_TAG || vars.AFFILIATE_TAG || 'williamdevspe-20' }}
           AMAZON_DOMAIN: ${{ vars.AMAZON_DOMAIN || 'www.amazon.com.br' }}
           SITE_URL: ${{ vars.SITE_URL || 'https://williamnext.github.io/auto-affiliate-seo' }}
         run: |

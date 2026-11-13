@@ -170,7 +170,7 @@ def render_layout(title: str, body_html: str, site_url: str, canonical_path: str
 
 def build_site(out_dir: pathlib.Path = DIST, fetch_live: bool = True) -> list[str]:
     load_env()
-    tag = os.getenv("AFFILIATE_TAG", "devspec-20")
+    tag = os.getenv("AFFILIATE_TAG", "williamdevspe-20")
     domain = os.getenv("AMAZON_DOMAIN", "www.amazon.com.br")
     site_url = os.getenv("SITE_URL", "https://williamnext.github.io/auto-affiliate-seo")
 
