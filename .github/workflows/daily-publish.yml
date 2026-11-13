@@ -1,8 +1,8 @@
-name: Daily Programmatic SEO Build & Deploy
+name: Daily Programmatic SEO & Social Bot
 
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
   push:
     branches: [main]
@@ -34,14 +34,30 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Run self-check & build static site
+      - name: Run self-checks, build static site & execute social bot
         env:
           AFFILIATE_TAG: ${{ secrets.AFFILIATE_TAG || vars.AFFILIATE_TAG || 'williamdevspe-20' }}
           AMAZON_DOMAIN: ${{ vars.AMAZON_DOMAIN || 'www.amazon.com.br' }}
           SITE_URL: ${{ vars.SITE_URL || 'https://williamnext.github.io/auto-affiliate-seo' }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_PROMO_IMAGE_URL: ${{ vars.IG_PROMO_IMAGE_URL }}
         run: |
           python build.py --test
+          python bot.py --test
           python build.py
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" = "12" ] || [ "$HOUR" = "21" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            python bot.py
+          else
+            python bot.py --comments-only
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
