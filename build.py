@@ -172,7 +172,7 @@ def build_site(out_dir: pathlib.Path = DIST, fetch_live: bool = True) -> list[st
     load_env()
     tag = os.getenv("AFFILIATE_TAG", "devspec-20")
     domain = os.getenv("AMAZON_DOMAIN", "www.amazon.com.br")
-    site_url = os.getenv("SITE_URL", "https://example.github.io/auto-affiliate-seo")
+    site_url = os.getenv("SITE_URL", "https://williamnext.github.io/auto-affiliate-seo")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     pages = list(CATALOG) + (fetch_trending_topics() if fetch_live else [])

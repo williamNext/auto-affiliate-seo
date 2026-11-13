@@ -31,11 +31,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Run self-check & build static site
         env:
           AFFILIATE_TAG: ${{ secrets.AFFILIATE_TAG || 'devspec-20' }}
           AMAZON_DOMAIN: ${{ vars.AMAZON_DOMAIN || 'www.amazon.com.br' }}
-          SITE_URL: ${{ vars.SITE_URL || 'https://example.github.io/auto-affiliate-seo' }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://williamnext.github.io/auto-affiliate-seo' }}
         run: |
           python build.py --test
           python build.py
